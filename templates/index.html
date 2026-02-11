@@ -508,20 +508,7 @@
       const busyLabel = buttonEl.dataset.busyLabel || "Working...";
       buttonEl.textContent = isBusy ? busyLabel : idleLabel;
       buttonEl.classList.toggle("loading", isBusy);
-      buttonEl.disabled = isBusy ? true : buttonEl.disabled;
-      formEl.querySelectorAll("input, select, label.btn").forEach((el) => {
-        if (el === buttonEl) return;
-        if (isBusy) {
-          el.dataset.prevDisabled = el.disabled ? "1" : "0";
-          el.disabled = true;
-          if (el.classList.contains("btn")) el.style.pointerEvents = "none";
-        } else {
-          const prev = el.dataset.prevDisabled;
-          if (prev === "0") el.disabled = false;
-          delete el.dataset.prevDisabled;
-          if (el.classList.contains("btn")) el.style.pointerEvents = "";
-        }
-      });
+      buttonEl.disabled = isBusy;
     }
 
     if (loadForm && loadBtn) {
