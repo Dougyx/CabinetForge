@@ -1,0 +1,12 @@
+services:
+  cabinetforge:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - CABINETFORGE_SECRET_KEY=change-me-in-production
+      - CABINETFORGE_SESSION_TTL=21600
+      - CABINETFORGE_MAX_UPLOAD_BYTES=314572800
+    restart: unless-stopped

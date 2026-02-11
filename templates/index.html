@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CabinetForge</title>
+  <style>
+    :root {
+      --ink: #1e2c31;
+      --muted: #5e7078;
+      --line: #ccd8dd;
+      --bg0: #eef4f2;
+      --bg1: #f8fbfa;
+      --panel: #ffffff;
+      --panel-strong: #f1f8f6;
+      --accent: #166c63;
+      --accent-2: #1e8f7d;
+      --ok: #0f7a42;
+      --err: #aa2c2c;
+      --warn: #8f6408;
+      --drop: #daf4ee;
+      --navy: #234b64;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background:
+        radial-gradient(1300px 600px at -10% -20%, #d7ece6 0%, transparent 70%),
+        radial-gradient(950px 500px at 120% -10%, #d9e8f3 0%, transparent 70%),
+        linear-gradient(140deg, var(--bg0), var(--bg1));
+    }
+
+    .wrap {
+      max-width: 1280px;
+      margin: 20px auto 28px;
+      padding: 0 16px;
+      animation: lift-in 220ms ease-out;
+    }
+
+    @keyframes lift-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero {
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 14px 24px rgba(28, 62, 74, 0.18);
+      margin-bottom: 12px;
+      line-height: 0;
+    }
+
+    .hero img { display: block; width: 100%; height: auto; }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 14px rgba(31, 69, 80, 0.08);
+      transition: transform 120ms ease, box-shadow 120ms ease;
+    }
+
+    .panel:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px rgba(31, 69, 80, 0.12);
+    }
+
+    h2 { margin: 0 0 9px; font-size: 1.04rem; }
+    p { margin: 6px 0; }
+
+    .row, .inline {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    input[type=text], select {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px 10px;
+      min-width: 240px;
+      background: #fff;
+      color: var(--ink);
+      transition: border-color 120ms ease, box-shadow 120ms ease;
+    }
+
+    input[type=text]:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(22,108,99,0.16);
+    }
+
+    .btn {
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      padding: 8px 12px;
+      background: linear-gradient(180deg, var(--accent-2), var(--accent));
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      transition: filter 120ms ease, transform 120ms ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+    }
+
+    .btn:hover { filter: brightness(1.05); }
+    .btn:active { transform: translateY(1px); }
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      filter: grayscale(0.2);
+      transform: none;
+    }
+    .btn.loading {
+      position: relative;
+      padding-left: 34px;
+    }
+    .btn.loading::before {
+      content: "";
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.45);
+      border-top-color: #fff;
+      border-radius: 50%;
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      margin-top: -7px;
+      animation: spin 0.7s linear infinite;
+    }
+
+    .btn.alt {
+      background: linear-gradient(180deg, #2d5f80, var(--navy));
+      border-color: var(--navy);
+    }
+
+    .btn.warn {
+      background: linear-gradient(180deg, #b08120, #8f6408);
+      border-color: #8f6408;
+    }
+
+    .btn.danger {
+      background: linear-gradient(180deg, #bd3d3d, #972a2a);
+      border-color: #972a2a;
+    }
+
+    .file-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .dropzone {
+      margin-top: 8px;
+      padding: 14px;
+      border: 2px dashed #9fc8be;
+      background: #f3fcfa;
+      border-radius: 12px;
+      color: #3c6468;
+      text-align: center;
+      transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+    }
+
+    .dropzone.dragover {
+      background: var(--drop);
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+    .file-feedback {
+      min-height: 22px;
+      margin-top: 6px;
+      font-size: 0.9rem;
+      color: #3f5f67;
+      font-weight: 600;
+    }
+    .file-feedback.empty {
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .flash {
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 8px;
+      animation: fade-slide 220ms ease-out;
+    }
+
+    @keyframes fade-slide {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .ok { background: #e7f8ef; color: var(--ok); border: 1px solid #b8e5ca; }
+    .error { background: #ffebeb; color: var(--err); border: 1px solid #f1c1c1; }
+    .muted { color: var(--muted); }
+
+    .sig-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+      background: var(--panel-strong);
+    }
+
+    .status-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: #888;
+      flex: 0 0 auto;
+    }
+
+    .status-dot.good { background: #0f7a42; }
+    .status-dot.warn { background: #8f6408; }
+    .status-dot.bad { background: #aa2c2c; }
+
+    .grid-wrap { overflow-x: auto; }
+
+    table {
+      border-collapse: separate;
+      border-spacing: 0;
+      width: 100%;
+      min-width: 980px;
+      font-size: 0.92rem;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 8px;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: #e6f0ef;
+      z-index: 1;
+    }
+
+    tr.update-drop.dragover td { background: #e2f5f0; }
+
+    .name-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .name-cell::before {
+      content: "\1F5CE";
+      font-size: 1rem;
+      color: #32627b;
+    }
+
+    .action-inline {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .action-select {
+      min-width: 135px;
+      padding: 6px 8px;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      color: #355d56;
+      border: 1px solid #bdd9d1;
+      background: #eff8f5;
+      border-radius: 999px;
+      padding: 4px 8px;
+    }
+
+    @media (max-width: 760px) {
+      .wrap { margin-top: 10px; padding: 0 10px; }
+      input[type=text], select { min-width: 170px; width: 100%; }
+      .panel { padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <img src="{{ url_for('static', filename='logo.svg') }}" alt="CabinetForge logo">
+    </div>
+
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% for category, msg in msgs %}
+      <div class="flash {{ category }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <div class="panel">
+      <h2>Load CAB</h2>
+      <form id="load-form" class="row" method="post" action="{{ url_for('cabinetforge.load_cab') }}" enctype="multipart/form-data">
+        <input id="cab-file" class="file-input" name="cab_file" type="file" accept=".cab,application/vnd.ms-cab-compressed" required>
+        <label class="btn alt" for="cab-file">Choose CAB</label>
+        <button id="load-btn" type="submit" class="btn" data-idle-label="Load Cabinet" data-busy-label="Loading..." disabled>Load Cabinet</button>
+      </form>
+      <div id="cab-file-feedback" class="file-feedback empty">No CAB selected.</div>
+      <div id="cab-dropzone" class="dropzone">
+        Drop a CAB file here.
+      </div>
+      {% if editor.path %}
+      <p class="muted">Loaded: <strong>{{ editor.path.name }}</strong></p>
+      {% endif %}
+    </div>
+
+    {% if editor.path %}
+    <div class="panel">
+      <h2>Signature</h2>
+      <div class="sig-box">
+        <span class="status-dot {% if editor.signature_before.get('Status') == 'Valid' %}good{% elif editor.signature_before.get('Status') == 'NotSigned' %}warn{% else %}bad{% endif %}"></span>
+        {% if editor.signature_before.get('Status') == 'NotSigned' %}
+        <strong>Not Signed, no issues.</strong>
+        {% elif editor.signature_before.get('Status') == 'Valid' %}
+        <strong>Signed and valid.</strong>
+        {% else %}
+        <strong>{{ editor.signature_before.get('Status', 'Unknown') }}. Review if signing is required.</strong>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Add File(s)</h2>
+      <form id="add-form" method="post" action="{{ url_for('cabinetforge.add_file') }}" enctype="multipart/form-data" class="row">
+        <input id="add-files" class="file-input" type="file" name="files" multiple required>
+        <label class="btn alt" for="add-files">Choose Files</label>
+        <input type="text" name="display_name" placeholder="Install filename (single file only)">
+        <select name="directory">
+          <option value="">Auto target directory</option>
+          {% for d in editor.directories %}
+          <option value="{{ d }}">{{ d }}</option>
+          {% endfor %}
+        </select>
+        <button id="add-btn" type="submit" class="btn" data-idle-label="Add" data-busy-label="Adding..." disabled>Add</button>
+      </form>
+      <div id="add-files-feedback" class="file-feedback empty">No files selected.</div>
+      <div id="add-dropzone" class="dropzone">Drop files here to add to the CAB.</div>
+    </div>
+
+    <div class="panel">
+      <h2>Explorer View</h2>
+      <p class="muted">Drag a file onto a row to replace it, or use the action menu.</p>
+      <div class="grid-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Source</th>
+              <th>Folder</th>
+              <th>Size</th>
+              <th>Modified</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for rec in editor.records %}
+            <tr class="update-drop" data-source="{{ rec.source_name }}" data-replace-id="replace-{{ loop.index }}">
+              <td><div class="name-cell">{{ rec.display_name }}</div></td>
+              <td>{{ rec.source_name }}</td>
+              <td>{{ rec.parent_type }}</td>
+              <td>{{ rec.size }}</td>
+              <td>{{ rec.modified }}</td>
+              <td>
+                <div class="action-inline">
+                  <select class="action-select">
+                    <option value="">Choose...</option>
+                    <option value="download">Download</option>
+                    <option value="replace">Replace</option>
+                    <option value="remove">Remove</option>
+                  </select>
+                  <button type="button" class="btn action-run">Run</button>
+                  <input id="replace-{{ loop.index }}" class="file-input replace-picker" type="file">
+                  <span class="pill">Drop to replace</span>
+                </div>
+                <form class="remove-form" method="post" action="{{ url_for('cabinetforge.remove_file', source_name=rec.source_name) }}"></form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Save CAB</h2>
+      <form id="save-form" method="post" action="{{ url_for('cabinetforge.save_cab') }}" class="row">
+        <label><input type="checkbox" name="compress"> Compress (MSZIP)</label>
+        <button type="submit" class="btn">Download Repacked CAB</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  <script>
+    function setFeedback(feedbackEl, files, singularLabel, pluralLabel) {
+      if (!feedbackEl) return;
+      if (!files || !files.length) {
+        feedbackEl.textContent = `No ${pluralLabel} selected.`;
+        feedbackEl.classList.add("empty");
+        return;
+      }
+      if (files.length === 1) {
+        feedbackEl.textContent = `${singularLabel}: ${files[0].name}`;
+      } else {
+        feedbackEl.textContent = `${files.length} ${pluralLabel} selected`;
+      }
+      feedbackEl.classList.remove("empty");
+    }
+
+    function wireInputFeedback(input, feedbackEl, buttonEl, singularLabel, pluralLabel) {
+      const sync = () => {
+        const files = Array.from(input.files || []);
+        setFeedback(feedbackEl, files, singularLabel, pluralLabel);
+        if (buttonEl) buttonEl.disabled = files.length === 0;
+      };
+      input.addEventListener("change", sync);
+      sync();
+      return sync;
+    }
+
+    function wireDropzone(dropzone, input, extCheck, onFilesAssigned) {
+      const prevent = (e) => { e.preventDefault(); e.stopPropagation(); };
+      ["dragenter", "dragover", "dragleave", "drop"].forEach((evt) => {
+        dropzone.addEventListener(evt, prevent, false);
+      });
+
+      ["dragenter", "dragover"].forEach((evt) => {
+        dropzone.addEventListener(evt, () => dropzone.classList.add("dragover"));
+      });
+      ["dragleave", "drop"].forEach((evt) => {
+        dropzone.addEventListener(evt, () => dropzone.classList.remove("dragover"));
+      });
+
+      dropzone.addEventListener("drop", (e) => {
+        const files = Array.from(e.dataTransfer.files || []);
+        if (!files.length) return;
+        if (extCheck && files.some((f) => !f.name.toLowerCase().endsWith(extCheck))) {
+          alert("Only " + extCheck + " files are allowed here.");
+          return;
+        }
+        const dt = new DataTransfer();
+        files.forEach((f) => dt.items.add(f));
+        input.files = dt.files;
+        if (typeof onFilesAssigned === "function") {
+          onFilesAssigned();
+        }
+      });
+    }
+
+    async function replaceSource(source, file) {
+      const fd = new FormData();
+      fd.append("file", file);
+      const resp = await fetch(`/update/${encodeURIComponent(source)}`, {
+        method: "POST",
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        body: fd,
+      });
+      if (!resp.ok) {
+        const payload = await resp.json().catch(() => ({}));
+        throw new Error(payload.error || "Update failed");
+      }
+    }
+
+    const cabDrop = document.getElementById("cab-dropzone");
+    const cabInput = document.getElementById("cab-file");
+    const loadForm = document.getElementById("load-form");
+    const cabFeedback = document.getElementById("cab-file-feedback");
+    const loadBtn = document.getElementById("load-btn");
+    const syncCabState = cabInput
+      ? wireInputFeedback(cabInput, cabFeedback, loadBtn, "Selected CAB", "CAB files")
+      : null;
+    if (cabDrop && cabInput) wireDropzone(cabDrop, cabInput, ".cab", syncCabState);
+
+    const addDrop = document.getElementById("add-dropzone");
+    const addInput = document.getElementById("add-files");
+    const addForm = document.getElementById("add-form");
+    const addFeedback = document.getElementById("add-files-feedback");
+    const addBtn = document.getElementById("add-btn");
+    const syncAddState = addInput
+      ? wireInputFeedback(addInput, addFeedback, addBtn, "Selected file", "files")
+      : null;
+    if (addDrop && addInput) wireDropzone(addDrop, addInput, null, syncAddState);
+
+    function setBusy(formEl, buttonEl, isBusy) {
+      if (!formEl || !buttonEl) return;
+      const idleLabel = buttonEl.dataset.idleLabel || buttonEl.textContent.trim();
+      const busyLabel = buttonEl.dataset.busyLabel || "Working...";
+      buttonEl.textContent = isBusy ? busyLabel : idleLabel;
+      buttonEl.classList.toggle("loading", isBusy);
+      buttonEl.disabled = isBusy ? true : buttonEl.disabled;
+      formEl.querySelectorAll("input, select, label.btn").forEach((el) => {
+        if (el === buttonEl) return;
+        if (isBusy) {
+          el.dataset.prevDisabled = el.disabled ? "1" : "0";
+          el.disabled = true;
+          if (el.classList.contains("btn")) el.style.pointerEvents = "none";
+        } else {
+          const prev = el.dataset.prevDisabled;
+          if (prev === "0") el.disabled = false;
+          delete el.dataset.prevDisabled;
+          if (el.classList.contains("btn")) el.style.pointerEvents = "";
+        }
+      });
+    }
+
+    if (loadForm && loadBtn) {
+      loadForm.addEventListener("submit", () => {
+        if (!cabInput || !cabInput.files || !cabInput.files.length) return;
+        setBusy(loadForm, loadBtn, true);
+      });
+    }
+
+    if (addForm && addBtn) {
+      addForm.addEventListener("submit", () => {
+        if (!addInput || !addInput.files || !addInput.files.length) return;
+        setBusy(addForm, addBtn, true);
+      });
+    }
+
+    document.querySelectorAll("tr.update-drop").forEach((row) => {
+      const source = row.dataset.source;
+      const replaceId = row.dataset.replaceId;
+      const replacePicker = document.getElementById(replaceId);
+      const runBtn = row.querySelector(".action-run");
+      const actionSelect = row.querySelector(".action-select");
+      const removeForm = row.querySelector(".remove-form");
+
+      replacePicker.addEventListener("change", async () => {
+        const file = replacePicker.files && replacePicker.files[0];
+        if (!file) return;
+        try {
+          await replaceSource(source, file);
+          location.reload();
+        } catch (err) {
+          alert(err.message || "Replace failed");
+        }
+      });
+
+      runBtn.addEventListener("click", () => {
+        const action = actionSelect.value;
+        if (!action) return;
+        if (action === "download") {
+          window.location.href = `/download/${encodeURIComponent(source)}`;
+          return;
+        }
+        if (action === "replace") {
+          replacePicker.click();
+          return;
+        }
+        if (action === "remove") {
+          if (confirm("Remove this file from CAB?")) {
+            removeForm.submit();
+          }
+        }
+      });
+
+      const prevent = (e) => { e.preventDefault(); e.stopPropagation(); };
+      ["dragenter", "dragover", "dragleave", "drop"].forEach((evt) => row.addEventListener(evt, prevent, false));
+      ["dragenter", "dragover"].forEach((evt) => row.addEventListener(evt, () => row.classList.add("dragover")));
+      ["dragleave", "drop"].forEach((evt) => row.addEventListener(evt, () => row.classList.remove("dragover")));
+
+      row.addEventListener("drop", async (e) => {
+        const files = Array.from(e.dataTransfer.files || []);
+        if (!files.length) return;
+        try {
+          await replaceSource(source, files[0]);
+          location.reload();
+        } catch (err) {
+          alert(err.message || "Replace failed");
+        }
+      });
+    });
+  </script>
+</body>
+</html>
