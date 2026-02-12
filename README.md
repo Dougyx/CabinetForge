@@ -1,27 +1,58 @@
 # CabinetForge
 
-CabinetForge is a Flask web UI for editing CAB files (add, replace, remove, repack) with session-isolated workspaces so multiple users can use the app at the same time.
+CabinetForge is a Flask web UI for editing CAB files. It supports loading a CAB, replacing files, adding files, removing files, and saving a repacked CAB while maintaining Windows CE-relevant cabinet layout characteristics from the source archive.
 
-## What Changed
+## Core Behavior
 
-- Session-scoped editor state (no global singleton editor).
-- Package-based structure (`cabinetforge/`) with docstrings and clearer module boundaries.
-- App factory pattern for production deployment.
-- Offline dependency bundle in `vendor/wheels`.
-- Docker and docker-compose support.
+- Uses per-session workspaces so multiple users can work concurrently in a single app instance.
+- Loads CABs into an in-memory editor and keeps `_setup.xml` mappings synchronized during add/remove operations.
+- Exposes file-level edit actions through the web UI and returns a downloadable repacked CAB.
+- Reports Authenticode status for the loaded CAB.
 
-## Project Structure
+## Windows CE CAB Repacking
+
+CabinetForge uses an internal CE-aware writer for output (`cabinetforge/ce_cab_writer.py`). On load, it captures layout metadata from the source CAB and reuses it when saving.
+
+Preserved layout/header characteristics:
+- `CFHEADER.flags` reserved bit (`0x0004`) state.
+- `setID`.
+- Reserved sizes: `cbCFHeader`, `cbCFFolder`, `cbCFData`.
+- Reserved header bytes (`abReserve`).
+- Per-folder reserve byte blocks.
+- Source file order.
+- Source file-to-folder mapping.
+- Folder count implied by the preserved mapping.
+
+Example characteristics from `app.CAB`:
+- `flags = 0x0004` (reserved fields enabled)
+- `cFolders = 33`
+- `cFiles = 47`
+- `cbCFHeader = 0`
+- `cbCFFolder = 64`
+- `cbCFData = 0`
+
+These values are read from each loaded CAB and carried forward during repack.
+
+## Limitations
+
+- Per-`CFDATA` reserve payload bytes are emitted as zero-filled when `cbCFData > 0`. Reserve size is preserved, original reserve payload content is not.
+- Chained/multi-cab sets (prev/next cabinet linkage) are not supported.
+- CAB digital signatures are not preserved after edits. Modified CABs should be treated as unsigned unless re-signed externally.
+- Workspace state is in-process memory. Multi-worker/multi-instance deployments require a shared state backend before scale-out.
+
+## Project Layout
 
 - `app.py`: local entrypoint.
 - `cabinetforge/app_factory.py`: Flask app factory.
-- `cabinetforge/routes.py`: HTTP routes/handlers.
-- `cabinetforge/cab_editor.py`: CAB and `_setup.xml` edit logic.
-- `cabinetforge/validation.py`: CAB upload validation and persistence.
+- `cabinetforge/routes.py`: HTTP routes and handlers.
+- `cabinetforge/cab_editor.py`: editor logic for CAB entries and `_setup.xml`.
+- `cabinetforge/ce_cab_writer.py`: CE-aware CAB layout parser/writer.
+- `cabinetforge/validation.py`: upload validation and persistence.
 - `cabinetforge/signature.py`: Authenticode status helper.
-- `cabinetforge/workspace.py`: per-session workspace manager.
+- `cabinetforge/workspace.py`: session workspace manager.
 - `cabinetforge/config.py`: runtime configuration.
 
-## Run Locally (Easy)
+## Run Locally
 
 ```powershell
 cd c:\Users\Lewis\OneDrive\Desktop\CABs\cab_webui
@@ -29,16 +60,15 @@ python -m pip install -r requirements.txt
 python app.py
 ```
 
-Open: `http://127.0.0.1:5000`
+Open `http://127.0.0.1:5000`.
 
-## Run Locally (Offline / No Internet)
+## Run Offline
 
 Dependencies are vendored in `vendor/wheels`.
 
 PowerShell:
 
 ```powershell
-cd c:\Users\Lewis\OneDrive\Desktop\CABs\cab_webui
 .\scripts\install_offline.ps1
 python app.py
 ```
@@ -46,29 +76,21 @@ python app.py
 CMD:
 
 ```bat
-cd c:\Users\Lewis\OneDrive\Desktop\CABs\cab_webui
 scripts\install_offline.bat
 python app.py
 ```
 
 ## Docker
 
-Build and run:
-
 ```powershell
 docker compose up --build
 ```
 
-Open: `http://127.0.0.1:8000`
+Open `http://127.0.0.1:8000`.
 
-The Docker image installs from local wheel files (`vendor/wheels`) so build does not require external PyPI access.
+The container installs from local wheels in `vendor/wheels`, so it does not require external PyPI access during build.
 
-Concurrency note:
-- Current workspace storage is in-memory per process.
-- Docker default runs one Gunicorn worker with multiple threads, which supports multiple concurrent users safely in one instance.
-- For multi-worker or multi-instance deployments, move workspace state to a shared backend (for example Redis) before scaling out.
-
-## Environment Variables
+## Configuration
 
 - `CABINETFORGE_SECRET_KEY`: Flask secret key.
 - `CABINETFORGE_MAX_UPLOAD_BYTES`: max upload size in bytes.
@@ -76,9 +98,9 @@ Concurrency note:
 - `CABINETFORGE_EXTRACT_DIR`: temp storage for extracted files.
 - `CABINETFORGE_SESSION_TTL`: session workspace retention in seconds.
 
-## Security Notes
+## Security
 
-- CAB upload validation checks extension, `MSCF` header, and parser acceptance.
-- CAB signatures are optional.
-- Modifying content invalidates prior signature trust.
-- App reports signature status; it does not re-sign CABs.
+- Upload validation checks extension, `MSCF` header, and parser acceptance.
+- Signature status is informational.
+- Editing content invalidates prior signature trust.
+- CabinetForge does not re-sign CAB output.

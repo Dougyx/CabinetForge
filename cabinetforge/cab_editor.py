@@ -11,6 +11,7 @@ from cabarchive import CabArchive, CabFile
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
+from .ce_cab_writer import CabLayoutTemplate, build_ce_cab_bytes, parse_cab_layout
 from .signature import get_signature_status
 
 
@@ -37,6 +38,7 @@ class CabEditor:
         self.records: list[CabRecord] = []
         self.directories: list[str] = []
         self.signature_before: dict[str, str] = {}
+        self.layout_template: CabLayoutTemplate | None = None
 
     def load(self, path: Path, display_name: str | None = None) -> None:
         """Load and index a CAB file from disk."""
@@ -44,7 +46,9 @@ class CabEditor:
         self.path = path
         candidate = (display_name or path.stem).strip()
         self.loaded_name = Path(candidate).stem or "cabinetforge_output"
-        self.archive = CabArchive(path.read_bytes())
+        raw = path.read_bytes()
+        self.layout_template = parse_cab_layout(raw)
+        self.archive = CabArchive(raw)
         self._load_setup_xml()
         self._rebuild_index()
         self.signature_before = get_signature_status(path)
@@ -119,7 +123,12 @@ class CabEditor:
         self._require_archive()
         if self.xml_root is not None:
             self._sync_setup_xml()
-        return self.archive.save(compress=compress, sort=True)
+        return build_ce_cab_bytes(
+            archive=self.archive,
+            compress=compress,
+            template=self.layout_template,
+            sort=True,
+        )
 
     def _require_archive(self) -> None:
         if not self.archive:
